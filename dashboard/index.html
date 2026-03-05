@@ -287,13 +287,16 @@
 
     function renderVPS(el, vps) {
       clearEl(el);
-      if (!vps || vps.error) {
-        showMsg(el, vps ? vps.error : 'No VPS data', 'error-msg');
+      if (!vps || vps.error || vps.note) {
+        showMsg(el, vps ? (vps.error || vps.note || 'No VPS data') : 'No VPS data', vps && vps.error ? 'error-msg' : 'empty-state');
         return;
       }
       var diskPct = parseInt((vps.disk_usage || '0').replace('%', '')) || 0;
-      el.appendChild(createStatRow('Disk Usage', vps.disk_usage || 'N/A', diskPct > 80 ? 'warning' : 'healthy'));
-      el.appendChild(createStatRow('Memory', vps.memory || 'N/A', 'healthy'));
+      var memPct = vps.memory_pct || 0;
+      var diskLabel = vps.disk_detail ? vps.disk_usage + ' (' + vps.disk_detail + ')' : (vps.disk_usage || 'N/A');
+      el.appendChild(createStatRow('Disk', diskLabel, diskPct > 80 ? 'warning' : 'healthy'));
+      el.appendChild(createStatRow('Memory', vps.memory || 'N/A', memPct > 80 ? 'warning' : 'healthy'));
+      el.appendChild(createStatRow('Load', vps.load && vps.cpu_cores ? vps.load + ' / ' + vps.cpu_cores + ' cores' : 'N/A', parseFloat(vps.load || 0) > vps.cpu_cores ? 'warning' : 'healthy'));
       el.appendChild(createStatRow('Containers', (vps.containers != null ? vps.containers + ' running' : 'N/A'), 'healthy'));
       el.appendChild(createStatRow('Uptime', vps.uptime || 'N/A', 'healthy'));
     }
@@ -345,7 +348,8 @@
         return;
       }
       var diskPct = parseInt((data.vps && data.vps.disk_usage || '0').replace('%', '')) || 0;
-      if (diskPct > 90) {
+      var memPct = (data.vps && data.vps.memory_pct) || 0;
+      if (diskPct > 90 || memPct > 90) {
         el.textContent = 'Needs Attention';
         el.className = 'status-value warn';
       } else {
